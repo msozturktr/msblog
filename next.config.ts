@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  output: "export", // tamamen statik HTML/CSS/JS üretir -> out/ klasörü
   reactCompiler: true,
 };
 
