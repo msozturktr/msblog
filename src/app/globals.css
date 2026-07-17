@@ -181,6 +181,8 @@ body {
   content: "";
   position: absolute;
   inset: 0;
+  /* Salt dekoratif katman: kartın içindeki input/buton tıklamalarını yutmamalı. */
+  pointer-events: none;
   border-radius: inherit;
   padding: 1px;
   background: linear-gradient(130deg, var(--violet), var(--cyan), transparent 60%);
@@ -196,6 +198,11 @@ body {
 }
 .card:hover::before {
   opacity: 1;
+}
+
+/* Form kartları: hover'da yükselme yazarken rahatsız ediyor. */
+.card-static:hover {
+  transform: none;
 }
 
 /* Buttons */

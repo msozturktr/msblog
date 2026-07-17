@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getPost, posts, formatDate, readingTime } from "@/lib/posts";
+import { getPost, getSortedPosts, formatDate, readingTime } from "@/lib/posts";
 import ReadingProgress from "@/components/ReadingProgress";
 
 export function generateStaticParams() {
-  return posts.map((post) => ({ slug: post.slug }));
+  return getSortedPosts().map((post) => ({ slug: post.slug }));
 }
 
 export async function generateMetadata({

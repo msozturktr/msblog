@@ -20,6 +20,29 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Writer paneli
+
+Yazılar `content/*.md` dosyalarında tutulur. Bunları elle düzenleyebilir ya da
+yerel writer panelini kullanabilirsin:
+
+```bash
+npm run dev   # → http://localhost:3000/writer
+```
+
+Panel şifreyi `.env.local` içindeki `WRITER_PASSWORD` değişkeninden okur (dosya
+git'e girmez):
+
+```
+WRITER_PASSWORD=senin-sifren
+```
+
+Kaydettiğin yazılar doğrudan `content/` klasörüne yazılır; yayınlamak için commit
+edip push etmen yeterli.
+
+Panel ve API'si `page.dev.tsx` / `route.dev.ts` uzantılarını kullanır. `next.config.ts`
+içindeki `pageExtensions` ayarı sayesinde bunlar yalnızca `next dev` derlemesinde
+tanınır — `npm run build` ile üretilen statik siteye dahil edilmezler.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

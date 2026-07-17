@@ -1,3 +1,6 @@
+import fs from "node:fs";
+import path from "node:path";
+
 export type Post = {
   slug: string;
   title: string;
@@ -7,37 +10,97 @@ export type Post = {
   content: string[];
 };
 
-export const posts: Post[] = [
-  {
-    slug: "merhaba-dunya",
-    title: "Merhaba Dünya",
-    date: "2026-07-13",
-    excerpt: "msblog'un ilk yazısı — burada neler paylaşacağım?",
-    tags: ["kişisel", "başlangıç"],
-    content: [
-      "Bu, msblog'daki ilk yazım. Burayı düşüncelerimi, öğrendiklerimi ve üzerinde çalıştığım projeleri paylaşmak için kullanacağım.",
-      "Yazılım, teknoloji ve zaman zaman kişisel konulara değineceğim. Uğradığın için teşekkürler!",
-    ],
-  },
-  {
-    slug: "neden-blog-yaziyorum",
-    title: "Neden Blog Yazıyorum?",
-    date: "2026-07-10",
-    excerpt: "Yazmak, düşünmenin en dürüst hâli. Kısa bir giriş.",
-    tags: ["yazmak", "düşünce"],
-    content: [
-      "Yazmak, bir fikri gerçekten anlayıp anlamadığımı test etmenin en iyi yolu. Bir şeyi başkasına anlatabiliyorsan, onu biliyorsun demektir.",
-      "Bu blog, kendime not tutmanın ve belki birilerine faydalı olmanın bir yolu.",
-    ],
-  },
-];
+export const CONTENT_DIR = path.join(process.cwd(), "content");
 
-export function getPost(slug: string): Post | undefined {
-  return posts.find((p) => p.slug === slug);
+/** Slugs are used as filenames, so keep them strictly safe. */
+export const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+const TR_MAP: Record<string, string> = {
+  ç: "c",
+  ğ: "g",
+  ı: "i",
+  ö: "o",
+  ş: "s",
+  ü: "u",
+  â: "a",
+  î: "i",
+  û: "u",
+};
+
+export function slugify(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/[çğıöşüâîû]/g, (c) => TR_MAP[c] ?? c)
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function parsePost(slug: string, raw: string): Post {
+  const match = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/.exec(raw);
+  if (!match) {
+    throw new Error(`${slug}.md: frontmatter bloğu bulunamadı`);
+  }
+
+  const [, frontmatter, body] = match;
+  const fields: Record<string, string> = {};
+  for (const line of frontmatter.split(/\r?\n/)) {
+    if (!line.trim()) continue;
+    const sep = line.indexOf(":");
+    if (sep === -1) continue;
+    const key = line.slice(0, sep).trim();
+    const value = line.slice(sep + 1).trim();
+    fields[key] = value.replace(/^["']|["']$/g, "");
+  }
+
+  return {
+    slug,
+    title: fields.title ?? slug,
+    date: fields.date ?? "",
+    excerpt: fields.excerpt ?? "",
+    tags: fields.tags
+      ? fields.tags
+          .split(",")
+          .map((t) => t.trim())
+          .filter(Boolean)
+      : [],
+    content: body
+      .trim()
+      .split(/\r?\n\s*\r?\n/)
+      .map((p) => p.trim())
+      .filter(Boolean),
+  };
+}
+
+/** Turns a post back into the on-disk `content/<slug>.md` representation. */
+export function serializePost(post: Omit<Post, "slug">): string {
+  const frontmatter = [
+    `title: ${post.title}`,
+    `date: ${post.date}`,
+    `excerpt: ${post.excerpt}`,
+    `tags: ${post.tags.join(", ")}`,
+  ].join("\n");
+
+  return `---\n${frontmatter}\n---\n\n${post.content.join("\n\n").trim()}\n`;
 }
 
 export function getSortedPosts(): Post[] {
-  return [...posts].sort((a, b) => b.date.localeCompare(a.date));
+  if (!fs.existsSync(CONTENT_DIR)) return [];
+
+  return fs
+    .readdirSync(CONTENT_DIR)
+    .filter((file) => file.endsWith(".md"))
+    .map((file) => {
+      const slug = file.replace(/\.md$/, "");
+      return parsePost(slug, fs.readFileSync(path.join(CONTENT_DIR, file), "utf8"));
+    })
+    .sort((a, b) => b.date.localeCompare(a.date));
+}
+
+export function getPost(slug: string): Post | undefined {
+  if (!SLUG_PATTERN.test(slug)) return undefined;
+  const file = path.join(CONTENT_DIR, `${slug}.md`);
+  if (!fs.existsSync(file)) return undefined;
+  return parsePost(slug, fs.readFileSync(file, "utf8"));
 }
 
 export function formatDate(date: string): string {
